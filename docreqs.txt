@@ -1,0 +1,10 @@
+pandas==1.3.2
+numpy==1.19.2
+matplotlib==3.3.4
+scipy==1.6.2
+pyvisa==1.11.3
+sphinx==3.4.3
+sphinx_rtd_theme==0.5.1
+IPython==7.22.0
+igor==0.3
+Jinja2<3.1
