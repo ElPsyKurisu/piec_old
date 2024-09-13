@@ -4,7 +4,7 @@ This is for the KEYSIGHT DSOX3024a Oscilloscope and requires the KEYSIGHT I/O Li
 import numpy as np
 import time
 from instrument import Scope
-
+#yes
 
 class DSOX3024a(Scope):
     """
