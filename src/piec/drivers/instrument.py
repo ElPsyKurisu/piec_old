@@ -34,13 +34,42 @@ class Instrument:
         self.write("*RST")
         self.write("*CLS")
 
+    def _check_params(self, locals_dict):
+        """
+        Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
+        against all class attributes and ensures if they match the range is valid
+        """
+        class_attributes = get_class_attributes_from_instance(self)
+        keys_to_check = get_matching_keys(locals_dict, class_attributes)
+        for key in keys_to_check:
+            key_dict = getattr(self, key) #this is a dict that the key is the type
+            if key_dict is None:
+                print("Warning no range-checking defined for \033[1m{}\033[0m, skipping __check_params".format(key)) #makes bold text
+                continue
+            input_value = locals_dict[key]
+            if input_value is None:
+                #Some functions may have a default value of None designed to be able to call a function without sending that command
+                continue
+            key_dict_key = list(key_dict.keys())[0]
+            key_dict_key_value = key_dict[key_dict_key]
+            #check if range or list type
+            if key_dict_key == "range":
+                if not is_value_between(input_value, key_dict_key_value): #will error need to make jey values correct
+                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, key, key_dict_key_value))
+            elif key_dict_key == "list":
+                if not is_contained(input_value, key_dict_key_value): #checks if the input value is in the allowed list
+                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is not in list of acceptable \033[1m{}\033[0m".format(input_value, key, key_dict_key_value))
+
 class Scope(Instrument):
     """
     Sub-class of Instrument to hold the general methods used by scopes. For Now defaulted to DSOX3024a, but can always ovveride certain SCOPE functions
     """
     #Should be overriden
-    voltage_range = None 
-    time_range = None
+    voltage_range = None #entire screen range
+    voltage_scale = None #units per division
+    time_range = None   
+    time_scale = None
+    time_base_type = None
     #add function called error test which checks if inputted paramas are in valid range
 
     def setup(self, channel: str=1, voltage_range: str=16, voltage_offset: str=1.00, delay: str='100e-6',
@@ -57,9 +86,9 @@ class Scope(Instrument):
             voltage_range (str): The y scale of the oscilloscope, max is 40V, min is 8mV
             voltage_offset (str): The offset for the voltage in units of volts
             delay (str): The delay in units of s
-            time_range (str): The x scale of the oscilloscope, min 2ns, max 50s
+            time_range (str): The x scale of the oscilloscope, min 20ns, max 500s
         """
-        self.__check_params(locals())
+        self._check_params(locals())
         self.reset()
         if autoscale:
             self.write(":AUToscale")
@@ -71,7 +100,7 @@ class Scope(Instrument):
         self.write(":ACQuire:TYPE NORMal")
 
     def configure_timebase(self, time_base_type="MAIN", position="0.0",
-                       reference="CENT", range=None, scale=None, vernier=False):
+                       reference="CENT", time_range=None, time_scale=None, vernier=False):
         """Configures the timebase of the oscilliscope. Adapted from EKPY program 'Configure Timebase (Basic)'
         Should call initialize first.
 
@@ -79,26 +108,27 @@ class Scope(Instrument):
             scope (pyvisa.resources.gpib.GPIBInstrument): Keysight DSOX3024a
             time_base_type (str): Allowed values are 'MAIN', 'WINDow', 'XY', and 'ROLL', note must use main for data acquisition
             position (str): The position in the scope, [0.0] is a good default This is actually the delay on the scope (moves in time right and left)
-            range (str): The x range of the scope min is 20ns, max is 500s
-            scale (str): The x scale of the scope in units of s/div min is 2ns, max is 50s
+            time_range (str): The x range of the scope min is 20ns, max is 500s
+            time_scale (str): The x scale of the scope in units of s/div min is 2ns, max is 50s
             vernier (boolean): Enables Vernier scale
         """
+        self._check_params(locals())
         if time_base_type is not None:
             self.write("TIM:MODE {}".format(time_base_type))
         if position is not None:
             self.write("TIM:POS {}".format(position))
-        if range is not None:
-            self.write("TIM:RANG {}".format(range))
+        if time_range is not None:
+            self.write("TIM:RANG {}".format(time_range))
         if reference is not None:
             self.write("TIM:REF {}".format(reference))
-        if scale is not None:
-            self.write("TIM:SCAL {}".format(scale))
+        if time_scale is not None:
+            self.write("TIM:SCAL {}".format(time_scale))
         if vernier:
             self.write("TIM:VERN ON")
         else:
             self.write("TIM:VERN OFF")
 
-    def configure_channel(self, channel: str='1', scale_mode=True, vertical_scale: str='5', vertical_range: str='40',
+    def configure_channel(self, channel: str='1', scale_mode=True, voltage_scale: str='5', voltage_range: str='40',
                               vertical_offset: str='0.0', coupling: str='DC', probe_attenuation: str='1.0', 
                               impedance: str='ONEM', enable_channel=True):
         """Sets up the voltage measurement on the desired channel with the desired paramaters. Taken from
@@ -108,18 +138,19 @@ class Scope(Instrument):
             scope (pyvisa.resources.gpib.GPIBInstrument): Keysight DSOX3024a
             channel (str): Desired channel allowed values are 1,2,3,4
             scale_mode (boolean): Allows us to select between a vertical scale or range setting [see options below]
-            vertical_scale (str): The vertical scale in units of v/div
-            vertical_range (str): The verticale scale range min: 8mv, max: 40V
+            voltage_scale (str): The vertical scale in units of v/div
+            voltage_range (str): The verticale scale range min: 8mv, max: 40V
             vertical_offset (str): The offset for the vertical scale in units of volts
             coupling (str): 'AC' or 'DC' values allowed
             probe_attenuation (str): Multiplicative factor to attenuate signal to stil be able to read, max is most likely 10:1
             impedance (str): Configures if we are in high impedance mode or impedance match. Allowed factors are 'ONEM' for 1 M Ohm and 'FIFT' for 50 Ohm
             enable_channel (boolean): Enables the channel
         """
+        self._check_params(locals())
         if scale_mode:
-            self.write("CHAN{}:SCAL {}".format(channel, vertical_scale))
+            self.write("CHAN{}:SCAL {}".format(channel, voltage_scale))
         else:
-            self.write("CHAN{}:RANG {}".format(channel, vertical_range))
+            self.write("CHAN{}:RANG {}".format(channel, voltage_range))
         self.write("CHAN{}:OFFS {}".format(channel, vertical_offset))
         self.write("CHAN{}:COUP {}".format(channel, coupling))
         self.write("CHAN{}:PROB {}".format(channel, probe_attenuation))
@@ -277,25 +308,18 @@ class Scope(Instrument):
         return preamble_dict, time, wfm
 
 
-    def __check_params(self, locals_dict):
-        """
-        Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
-        against all class attributes and ensures if they match the range is valid
-        """
-        class_attributes = get_class_attributes_from_instance(self)
-        keys_to_check = get_matching_keys(locals_dict, class_attributes)
-        for key in keys_to_check:
-            key_values = getattr(self, key) #this should be a tuple
-            if key_values is None:
-                print("Warning no range-checking defined for \033[1m{}\033[0m, skipping __check_params".format(key)) #makes bold text
-                continue
-            input_value = locals_dict[key]
-            if not is_value_between(input_value, key_values):
-                exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, key, key_values))
-
 """
 Helper Functions Below
 """
+
+def is_contained(value, lst):
+    """
+    Helper Function that checks if a string is contained within a list and ignores case sensitivity
+    """
+    my_string = value.lower()
+    my_list = [item.lower() for item in lst]
+    return my_string in my_list
+
 
 def is_value_between(value, num_tuple):
     """
