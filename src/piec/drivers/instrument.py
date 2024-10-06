@@ -128,8 +128,8 @@ class Scope(Instrument):
         else:
             self.write("TIM:VERN OFF")
 
-    def configure_channel(self, channel: str='1', scale_mode=True, voltage_scale: str='5', voltage_range: str='40',
-                              vertical_offset: str='0.0', coupling: str='DC', probe_attenuation: str='1.0', 
+    def configure_channel(self, channel: str='1', scale_mode=True, voltage_scale: str='4', voltage_range: str='40',
+                              voltage_offset: str='0.0', coupling: str='DC', probe_attenuation: str='1.0', 
                               impedance: str='ONEM', enable_channel=True):
         """Sets up the voltage measurement on the desired channel with the desired paramaters. Taken from
         EKPY. 
@@ -140,7 +140,7 @@ class Scope(Instrument):
             scale_mode (boolean): Allows us to select between a vertical scale or range setting [see options below]
             voltage_scale (str): The vertical scale in units of v/div
             voltage_range (str): The verticale scale range min: 8mv, max: 40V
-            vertical_offset (str): The offset for the vertical scale in units of volts
+            voltage_offset (str): The offset for the vertical scale in units of volts
             coupling (str): 'AC' or 'DC' values allowed
             probe_attenuation (str): Multiplicative factor to attenuate signal to stil be able to read, max is most likely 10:1
             impedance (str): Configures if we are in high impedance mode or impedance match. Allowed factors are 'ONEM' for 1 M Ohm and 'FIFT' for 50 Ohm
@@ -151,7 +151,7 @@ class Scope(Instrument):
             self.write("CHAN{}:SCAL {}".format(channel, voltage_scale))
         else:
             self.write("CHAN{}:RANG {}".format(channel, voltage_range))
-        self.write("CHAN{}:OFFS {}".format(channel, vertical_offset))
+        self.write("CHAN{}:OFFS {}".format(channel, voltage_offset))
         self.write("CHAN{}:COUP {}".format(channel, coupling))
         self.write("CHAN{}:PROB {}".format(channel, probe_attenuation))
         self.write("CHAN{}:IMP {}".format(channel, impedance))
@@ -175,6 +175,7 @@ class Scope(Instrument):
             enable_high_freq_filter (boolean): Toggles the high frequency filter
             enable_noise_filter (boolean): Toggles the noise filter
         """
+        self._check_params(locals())
         if enable_high_freq_filter:
             self.write(":TRIG:HFR ON")
         else:
@@ -200,6 +201,7 @@ class Scope(Instrument):
             level (str): Trigger level in volts
             filter_type (str): Allowed values = [OFF, LFR (High-pass filter), HFR (Low-pass filter)] Note: Low Frequency reject == High-pass
         """
+        self._check_params(locals())
         self.write(":TRIG:SOUR {}".format(trigger_source))
         self.write(":TRIG:COUP {}".format(input_coupling))
         self.write(":TRIG:LEV {}".format(level))
@@ -229,7 +231,8 @@ class Scope(Instrument):
             points (str): Number of data points for the waveform to return allowed args are [100,250,500,1000] for NORM or up to [8000000] for MAX or RAW
             points_mode (str): Mode for points allowed args are [NORM (normal), MAX (maximum), RAW]
             unsigned (str): Allows to switch between unsigned and signed integers [OFF (signed), ON (unsigned)]
-        """ 
+        """
+        self._check_params(locals())
         self.write(":WAVeform:SOURce {}".format(source))
         self.write(":WAVeform:BYTeorder {}".format(byte_order))
         self.write(":WAVeform:FORMat {}".format(format))
@@ -265,7 +268,8 @@ class Scope(Instrument):
             preamble_dict (dict) Dictionary with all params labeled. (MetaData)
             time (list): Python list with all the scaled time (x_data array)
             wfm (list): Python list with all the scaled y_values (y_data array) 
-        """ 
+        """
+        self._check_params(locals())
         preamble = self.query(":WAVeform:PREamble?")
         preamble1 = preamble.split()
         preamble_list = preamble1[0].split(',')
