@@ -10,6 +10,14 @@ class DSOX3024a(Scope):
     """
     Specific Class for this exact model of scope: Keysight DSOX3024a
     """
+    #add class attributes here, like max y range etc
+    voltage_range = (0.008, 40) #voltage range
+    #time_range = (2e-9, 50)
+    time_range = None
+
+
+
+
     def configure_timebase(scope, time_base_type="MAIN", position="0.0",
                         reference="CENT", range=None, scale=None, vernier=False):
         """Configures the timebase of the oscilliscope. Adapted from LabVIEW program 'Configure Timebase (Basic)'

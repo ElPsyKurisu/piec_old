@@ -1,6 +1,7 @@
 """
 Set's up the instrument class that all instruments will inherit basic functionlity from to be followed by sub classes (e.g. scope, wavegen)
 """
+from typing import override
 import numpy as np
 # Define a class
 class Instrument:
@@ -37,6 +38,10 @@ class Scope(Instrument):
     """
     Sub-class of Instrument to hold the general methods used by scopes. For Now defaulted to DSOX3024a, but can always ovveride certain SCOPE functions
     """
+    #Should be overriden
+    voltage_range = None 
+    time_range = None
+    #add function called error test which checks if inputted paramas are in valid range
 
     def setup(self, channel: str=1, voltage_range: str=16, voltage_offset: str=1.00, delay: str='100e-6',
           time_range: str='1e-3', autoscale=True):
@@ -54,6 +59,8 @@ class Scope(Instrument):
             delay (str): The delay in units of s
             time_range (str): The x scale of the oscilloscope, min 2ns, max 50s
         """
+        self.check_params(locals())
+        return
         self.reset()
         if autoscale:
             self.write(":AUToscale")
@@ -269,3 +276,53 @@ class Scope(Instrument):
         for d in data:
             wfm.append((d * preamble_dict["y_increment"]) + preamble_dict["y_origin"])
         return preamble_dict, time, wfm
+
+
+    def check_params(self, locals_dict):
+        """
+        Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
+        against all class attributes and ensures if they match the range is valid
+        """
+        class_attributes = get_class_attributes_from_instance(self)
+        keys_to_check = get_matching_keys(locals_dict, class_attributes)
+        print(keys_to_check)
+        for key in keys_to_check:
+            print(type(key))
+            key_values = getattr(self, key) #this is a tuple i believe need to check if None
+            if key_values is None:
+                print("Warning no range-checking defined for \033[1m{}\033[0m, skipping __check_params".format(key)) #makes bold text
+                continue
+            input_value = locals_dict[key]
+            print('key vals', key_values)
+            print('input vals', input_value)
+            if is_value_between(input_value, key_values):
+                print('good boy')
+            else:
+                print('bad boy')
+
+def is_value_between(value, num_tuple):
+    """
+    Helper function that checks if the value is between allowed ranges, taken with help from ChatGPT
+    """
+    if type(value) is str:
+        value = float(value)
+    if len(num_tuple) != 2:
+        raise ValueError("Tuple must contain exactly two numbers")
+    return num_tuple[0] <= value <= num_tuple[1]
+
+def get_matching_keys(dict1, dict2):
+    """ 
+    Find the intersection of keys from both dictionaries, taken from ChatGPT
+    """
+    matching_keys = set(dict1.keys()).intersection(dict2.keys())
+    return list(matching_keys)
+
+def get_class_attributes_from_instance(instance):
+    """
+    Helper Function to get the class attributes from an instance (calls self) with help from ChatGPT
+    """
+    cls = instance.__class__
+    attributes = {}
+    for base in cls.__mro__:
+        attributes.update({attr: getattr(base, attr) for attr in base.__dict__ if not callable(getattr(base, attr)) and not attr.startswith("__")})
+    return attributes
