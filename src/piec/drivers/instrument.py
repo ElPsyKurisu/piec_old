@@ -59,8 +59,7 @@ class Scope(Instrument):
             delay (str): The delay in units of s
             time_range (str): The x scale of the oscilloscope, min 2ns, max 50s
         """
-        self.check_params(locals())
-        return
+        self.__check_params(locals())
         self.reset()
         if autoscale:
             self.write(":AUToscale")
@@ -278,27 +277,25 @@ class Scope(Instrument):
         return preamble_dict, time, wfm
 
 
-    def check_params(self, locals_dict):
+    def __check_params(self, locals_dict):
         """
         Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
         against all class attributes and ensures if they match the range is valid
         """
         class_attributes = get_class_attributes_from_instance(self)
         keys_to_check = get_matching_keys(locals_dict, class_attributes)
-        print(keys_to_check)
         for key in keys_to_check:
-            print(type(key))
-            key_values = getattr(self, key) #this is a tuple i believe need to check if None
+            key_values = getattr(self, key) #this should be a tuple
             if key_values is None:
                 print("Warning no range-checking defined for \033[1m{}\033[0m, skipping __check_params".format(key)) #makes bold text
                 continue
             input_value = locals_dict[key]
-            print('key vals', key_values)
-            print('input vals', input_value)
-            if is_value_between(input_value, key_values):
-                print('good boy')
-            else:
-                print('bad boy')
+            if not is_value_between(input_value, key_values):
+                exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, key, key_values))
+
+"""
+Helper Functions Below
+"""
 
 def is_value_between(value, num_tuple):
     """
@@ -326,3 +323,15 @@ def get_class_attributes_from_instance(instance):
     for base in cls.__mro__:
         attributes.update({attr: getattr(base, attr) for attr in base.__dict__ if not callable(getattr(base, attr)) and not attr.startswith("__")})
     return attributes
+
+"""
+Error handling: maybe make a seperate python file to take care of error handling 
+
+Also good idea to add option to suppress warnings, aka no print statements instead call warning function that has param that can be suppressed
+"""
+
+def exit_with_error(msg):
+    """
+    Function to raise error message that provides faster feedback
+    """
+    raise ValueError(msg)
