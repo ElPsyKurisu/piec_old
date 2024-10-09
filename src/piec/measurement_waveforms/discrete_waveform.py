@@ -16,11 +16,10 @@ class DiscreteWaveform:
 
         self.awg = awg
         self.osc = osc
-        self.trigger_amp = trigger_amp
         self.data = None
 
     def configure_trigger(self):
-        self.awg.configure_trigger(voltage_channel='1', source='MAN')
+        self.awg.configure_trigger(channel='1', source='MAN')
 
     def configure_oscilloscope(self):
         """
@@ -42,8 +41,8 @@ class DiscreteWaveform:
         """
         print(f"Capturing waveform of type {self.type} for {self.length} seconds...")  # Wait for the oscilloscope to capture the waveform
         self.awg.send_software_trigger()
-        time.sleep(self.n_cycles)
-        metadata, trace_t, trace_v  = self.osc.query_wf()
+        time.sleep(0.2)
+        metadata, trace_t, trace_v  = self.osc.query_wf()#change
         self.data = pd.Dataframe({"time (s)":trace_t, "voltage (V)": trace_v}) # Retrieve the data from the oscilloscope
         print("Waveform captured.")
 
@@ -110,7 +109,7 @@ def interpolate_sparse_to_dense(x_sparse, y_sparse, total_points=100):
 ### SPECIFIC WAVEFORM MEASURMENT CLASSES ###
 
 class HysteresisLoop(DiscreteWaveform):
-    def __init__(self, frequency=1000, amplitude=1, offset=0, n_cycles=2, voltage_channel:str='1'):
+    def __init__(self, awg=None, osc=None, frequency=1000, amplitude=1, offset=0, n_cycles=2, voltage_channel:str='1'):
         """
         Initializes the HysteresisLoop class.
         
@@ -119,21 +118,22 @@ class HysteresisLoop(DiscreteWaveform):
         :param offset: Offset of the triangle wave (in Volts)
         :param n_cycles: number of triangle cycles to run
         """
+        super().__init__(awg=awg, osc=osc)
         self.type = "HYSTERESIS"
         self.length = 1/frequency
 
-        self.frequency = str(frequency)
-        self.amplitude = str(amplitude)
-        self.offset = str(offset)
-        self.n_cycles = str(n_cycles)
-        self.voltage_channel = str(voltage_channel)
+        self.frequency = frequency
+        self.amplitude = amplitude
+        self.offset = offset
+        self.n_cycles = n_cycles
+        self.voltage_channel = voltage_channel
 
     def configure_awg(self):
         """
         Configures the Arbitrary Waveform Generator (AWG) to output a triangle wave.
         """
         # Set the AWG to generate a triangle wave
-        interp_voltage_array = [0,1,0,-1,0]+([1,0,-1,0]*(self.n_cycles-1))
+        interp_voltage_array = [0,1,0,-1,0]+([1,0,-1,0]*((self.n_cycles)-1))
         self.awg.create_arb_wf(interp_voltage_array, 'PV')
         self.awg.configure_arb_wf(self.voltage_channel, 'PV', gain=f'{self.amplitude*2}', freq=f'{self.frequency}') 
 

@@ -3,14 +3,15 @@ Set's up the instrument class that all instruments will inherit basic functionli
 """
 from typing import Union
 import numpy as np
+
 # Define a class
 class Instrument:
     # Class attribute
     species = "Canis familiaris" #do we need any class attributes
 
     # Initializer / Instance attributes
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, resource):
+        self.instrument = resource
 
     # Generic Methods all instruments should have
     def idn(self):
@@ -18,21 +19,21 @@ class Instrument:
         Queries the instrument for its ID
 
         """
-        return self.query("*IDN?")
+        return self.instrument.query("*IDN?")
 
 
     def reset(self):
         """
         Resets the instrument to its default parameters
         """
-        self.write("*RST")
+        self.instrument.write("*RST")
 
     def initialize(self):
         """
         Resets the instrument and clears the registry
         """
-        self.write("*RST")
-        self.write("*CLS")
+        self.instrument.write("*RST")
+        self.instrument.write("*CLS")
 
     def print_specs(self):
         """
@@ -106,13 +107,13 @@ class Scope(Instrument):
         self._check_params(locals())
         self.reset()
         if autoscale:
-            self.write(":AUToscale")
+            self.instrument.write(":AUToscale")
         else:
-            self.write("CHANel{}:RANGe {}".format(channel, voltage_range))
-            self.write("CHANel{}:OFFSet {}".format(channel, voltage_offset))
-            self.write("CHANel{}:TIMebase:RANGe {}".format(channel, time_range))
-            self.write("CHANel{}:TIMebase:DELay {}".format(channel, delay))
-        self.write(":ACQuire:TYPE NORMal")
+            self.instrument.write("CHANel{}:RANGe {}".format(channel, voltage_range))
+            self.instrument.write("CHANel{}:OFFSet {}".format(channel, voltage_offset))
+            self.instrument.write("CHANel{}:TIMebase:RANGe {}".format(channel, time_range))
+            self.instrument.write("CHANel{}:TIMebase:DELay {}".format(channel, delay))
+        self.instrument.write(":ACQuire:TYPE NORMal")
 
     def configure_timebase(self, time_base_type="MAIN", position="0.0",
                        reference="CENT", time_range=None, time_scale=None, vernier=False):
@@ -129,19 +130,19 @@ class Scope(Instrument):
         """
         self._check_params(locals())
         if time_base_type is not None:
-            self.write("TIM:MODE {}".format(time_base_type))
+            self.instrument.write("TIM:MODE {}".format(time_base_type))
         if position is not None:
-            self.write("TIM:POS {}".format(position))
+            self.instrument.write("TIM:POS {}".format(position))
         if time_range is not None:
-            self.write("TIM:RANG {}".format(time_range))
+            self.instrument.write("TIM:RANG {}".format(time_range))
         if reference is not None:
-            self.write("TIM:REF {}".format(reference))
+            self.instrument.write("TIM:REF {}".format(reference))
         if time_scale is not None:
-            self.write("TIM:SCAL {}".format(time_scale))
+            self.instrument.write("TIM:SCAL {}".format(time_scale))
         if vernier:
-            self.write("TIM:VERN ON")
+            self.instrument.write("TIM:VERN ON")
         else:
-            self.write("TIM:VERN OFF")
+            self.instrument.write("TIM:VERN OFF")
 
     def configure_channel(self, channel: str='1', scale_mode=True, voltage_scale: str='4', voltage_range: str='40',
                               voltage_offset: str='0.0', coupling: str='DC', probe_attenuation: str='1.0', 
@@ -163,17 +164,17 @@ class Scope(Instrument):
         """
         self._check_params(locals())
         if scale_mode:
-            self.write("CHAN{}:SCAL {}".format(channel, voltage_scale))
+            self.instrument.write("CHAN{}:SCAL {}".format(channel, voltage_scale))
         else:
-            self.write("CHAN{}:RANG {}".format(channel, voltage_range))
-        self.write("CHAN{}:OFFS {}".format(channel, voltage_offset))
-        self.write("CHAN{}:COUP {}".format(channel, coupling))
-        self.write("CHAN{}:PROB {}".format(channel, probe_attenuation))
-        self.write("CHAN{}:IMP {}".format(channel, impedance))
+            self.instrument.write("CHAN{}:RANG {}".format(channel, voltage_range))
+        self.instrument.write("CHAN{}:OFFS {}".format(channel, voltage_offset))
+        self.instrument.write("CHAN{}:COUP {}".format(channel, coupling))
+        self.instrument.write("CHAN{}:PROB {}".format(channel, probe_attenuation))
+        self.instrument.write("CHAN{}:IMP {}".format(channel, impedance))
         if enable_channel:
-            self.write("CHAN{}:DISP ON".format(channel))
+            self.instrument.write("CHAN{}:DISP ON".format(channel))
         else:
-            self.write("CHAN{}:DISP OFF".format(channel))
+            self.instrument.write("CHAN{}:DISP OFF".format(channel))
     
     def configure_trigger_characteristics(self, type: str='EDGE', holdoff_time: str='4E-8', low_voltage_level: str='1',
                                       high_voltage_level: str='1', trigger_source: str='CHAN1', sweep: str='AUTO',
@@ -192,18 +193,18 @@ class Scope(Instrument):
         """
         self._check_params(locals())
         if enable_high_freq_filter:
-            self.write(":TRIG:HFR ON")
+            self.instrument.write(":TRIG:HFR ON")
         else:
-            self.write(":TRIG:HFR OFF")
-        self.write(":TRIG:HOLD {}".format(holdoff_time))
-        self.write(":TRIG:LEV:HIGH {}, {}".format(high_voltage_level, trigger_source))
-        self.write(":TRIG:LEV:LOW {}, {}".format(low_voltage_level, trigger_source))
-        self.write(":TRIG:MODE {}".format(type))
+            self.instrument.write(":TRIG:HFR OFF")
+        self.instrument.write(":TRIG:HOLD {}".format(holdoff_time))
+        self.instrument.write(":TRIG:LEV:HIGH {}, {}".format(high_voltage_level, trigger_source))
+        self.instrument.write(":TRIG:LEV:LOW {}, {}".format(low_voltage_level, trigger_source))
+        self.instrument.write(":TRIG:MODE {}".format(type))
         if enable_noise_filter:
-            self.write(":TRIG:NREJ ON")
+            self.instrument.write(":TRIG:NREJ ON")
         else:
-            self.write(":TRIG:NREJ OFF")
-        self.write(":TRIG:SWE {}".format(sweep))
+            self.instrument.write(":TRIG:NREJ OFF")
+        self.instrument.write(":TRIG:SWE {}".format(sweep))
 
     def configure_trigger_edge(self, trigger_source: str='CHAN1', input_coupling: str='AC', edge_slope: str='POS', 
                            level: str='0', filter_type: str='OFF'):
@@ -217,11 +218,11 @@ class Scope(Instrument):
             filter_type (str): Allowed values = [OFF, LFR (High-pass filter), HFR (Low-pass filter)] Note: Low Frequency reject == High-pass
         """
         self._check_params(locals())
-        self.write(":TRIG:SOUR {}".format(trigger_source))
-        self.write(":TRIG:COUP {}".format(input_coupling))
-        self.write(":TRIG:LEV {}".format(level))
-        self.write(":TRIG:REJ {}".format(filter_type))
-        self.write(":TRIG:SLOP {}".format(edge_slope))
+        self.instrument.write(":TRIG:SOUR {}".format(trigger_source))
+        self.instrument.write(":TRIG:COUP {}".format(input_coupling))
+        self.instrument.write(":TRIG:LEV {}".format(level))
+        self.instrument.write(":TRIG:REJ {}".format(filter_type))
+        self.instrument.write(":TRIG:SLOP {}".format(edge_slope))
 
     def initiate(self):
         """
@@ -232,8 +233,8 @@ class Scope(Instrument):
         args:
             scope (pyvisa.resources.gpib.GPIBInstrument): Keysight DSOX3024a
         """
-        self.write(":DIG")
-        self.write("*CLS")
+        self.instrument.write(":DIG")
+        self.instrument.write("*CLS")
     
     def setup_wf(self, source: str='CHAN1', byte_order: str='MSBF', format: str='byte', points: str='1000', 
              points_mode: str='NORMal', unsigned: str='OFF'):
@@ -248,12 +249,12 @@ class Scope(Instrument):
             unsigned (str): Allows to switch between unsigned and signed integers [OFF (signed), ON (unsigned)]
         """
         self._check_params(locals())
-        self.write(":WAVeform:SOURce {}".format(source))
-        self.write(":WAVeform:BYTeorder {}".format(byte_order))
-        self.write(":WAVeform:FORMat {}".format(format))
-        self.write(":WAVeform:POINts:MODE {}".format(points_mode))
-        self.write(":WAVeform:POINts {}".format(points))
-        self.write(":WAVeform:UNSigned {}".format(unsigned))
+        self.instrument.write(":WAVeform:SOURce {}".format(source))
+        self.instrument.write(":WAVeform:BYTeorder {}".format(byte_order))
+        self.instrument.write(":WAVeform:FORMat {}".format(format))
+        self.instrument.write(":WAVeform:POINts:MODE {}".format(points_mode))
+        self.instrument.write(":WAVeform:POINts {}".format(points))
+        self.instrument.write(":WAVeform:UNSigned {}".format(unsigned))
 
     def query_wf(self, byte_order: str='MSBF', unsigned: str='OFF'):
         """Returns the specified channels waveform with averaging or not and of a specified format/count, call
@@ -285,7 +286,7 @@ class Scope(Instrument):
             wfm (list): Python list with all the scaled y_values (y_data array) 
         """
         self._check_params(locals())
-        preamble = self.query(":WAVeform:PREamble?")
+        preamble = self.instrument.query(":WAVeform:PREamble?")
         preamble1 = preamble.split()
         preamble_list = preamble1[0].split(',')
         preamble_dict = {
@@ -309,15 +310,15 @@ class Scope(Instrument):
         if unsigned == 'ON':
             is_unsigned = True
         if preamble_dict["format"] == 0 and not is_unsigned:
-            data = self.query_binary_values("WAVeform:DATA?", datatype='b', is_big_endian=is_big_endian)
+            data = self.instrument.query_binary_values("WAVeform:DATA?", datatype='b', is_big_endian=is_big_endian)
         if preamble_dict["format"] == 0 and is_unsigned:
-            data = self.query_binary_values("WAVeform:DATA?", datatype='B', is_big_endian=is_big_endian)
+            data = self.instrument.query_binary_values("WAVeform:DATA?", datatype='B', is_big_endian=is_big_endian)
         if preamble_dict["format"] == 1 and not is_unsigned:
-            data = self.query_binary_values("WAVeform:DATA?", datatype='h', is_big_endian=is_big_endian)
+            data = self.instrument.query_binary_values("WAVeform:DATA?", datatype='h', is_big_endian=is_big_endian)
         if preamble_dict["format"] == 1 and is_unsigned:
-            data = self.query_binary_values("WAVeform:DATA?", datatype='H', is_big_endian=is_big_endian)
+            data = self.instrument.query_binary_values("WAVeform:DATA?", datatype='H', is_big_endian=is_big_endian)
         if preamble_dict["format"] == 4:
-            data = self.query_ascii_values("WAVeform:DATA?")
+            data = self.instrument.query_ascii_values("WAVeform:DATA?")
         time = []
         wfm = []
         for t in range(preamble_dict["points"]):
@@ -334,6 +335,7 @@ class Awg(Instrument):
     #Should be overriden
     channel = None
     func = None
+    slew_rate = None #1V/ns
     #add function called error test which checks if inputted paramas are in valid range
     def configure_impedance(self, channel: str='1', source_impedance: str='50.0', load_impedance: str='50.0'):
         """
@@ -345,9 +347,9 @@ class Awg(Instrument):
             load_impedance (str): The desired load impedance in units of Ohms, allowed args are [0.3 to 1E6]
 
         """
-        self.write(":OUTP{}:IMP {}".format(channel, source_impedance))
+        self.instrument.write(":OUTP{}:IMP {}".format(channel, source_impedance))
         #wavegen.write(":OUTP{}:LOAD {}".format(channel, load_impedance)) Also valid for below
-        self.write(":OUTP{}:IMP:EXT {}".format(channel, load_impedance))
+        self.instrument.write(":OUTP{}:IMP:EXT {}".format(channel, load_impedance))
 
     def configure_output_amplifier(self, channel: str='1', type: str='HIV'):
         """
@@ -357,7 +359,7 @@ class Awg(Instrument):
             channel (str): Desired Channel to configure accepted params are [1,2]
             type (str): Amplifier Type args = [HIV (MAximum Amplitude), HIB (Maximum Bandwith)]
         """
-        self.write("OUTP{}:ROUT {}".format(channel, type))
+        self.instrument.write("OUTP{}:ROUT {}".format(channel, type))
 
     def configure_trigger(self, channel: str='1', source: str='IMM', mode: str='EDGE', slope: str='POS'):
         """
@@ -369,9 +371,9 @@ class Awg(Instrument):
             mode (str): The type of triggering allowed args = [EDGE (edge), LEV (level)]
             slope (str): The slope of triggering allowed args = [POS (positive), NEG (negative), EIT (either)]
         """ 
-        self.write(":ARM:SOUR{} {}".format(channel, source))
-        self.write(":ARM:SENS{} {}".format(channel, mode))
-        self.write(":ARM:SLOP {}".format(slope))
+        self.instrument.write(":ARM:SOUR{} {}".format(channel, source))
+        self.instrument.write(":ARM:SENS{} {}".format(channel, mode))
+        self.instrument.write(":ARM:SLOP {}".format(slope))
 
     def create_arb_wf_binary(self, data: Union[np.array, list], name: str='ARB1'):
         """
@@ -402,9 +404,9 @@ class Awg(Instrument):
         #c is the binary data to be passed
         c = scaled_data.tobytes()
         #i think im done?
-        self.write(":FORM:BORD NORM")
-        self.write(":DATA:DAC VOLATILE, #{}{}{}".format(a,b,c))
-        self.write(":DATA:COPY {}, VOLATILE".format(name))
+        self.instrument.write(":FORM:BORD NORM")
+        self.instrument.write(":DATA:DAC VOLATILE, #{}{}{}".format(a,b,c))
+        self.instrument.write(":DATA:COPY {}, VOLATILE".format(name))
 
     def create_arb_wf(self, data, name=None):
         """
@@ -424,9 +426,9 @@ class Awg(Instrument):
         for i in range(len(data)):
             data_string += str(data[i]) +','
         data_string = data_string[:-1] #remove last comma
-        self.write(":DATA VOLATILE, {}".format(data_string))
+        self.instrument.write(":DATA VOLATILE, {}".format(data_string))
         if name is not None:
-            self.write(":DATA:COPY {}, VOLATILE".format(name))
+            self.instrument.write(":DATA:COPY {}, VOLATILE".format(name))
 
 
 
@@ -446,11 +448,11 @@ class Awg(Instrument):
             offset (str): The voltage offset in units of volts
             freq (str): the frequency in units of Hz for the arbitrary waveform
         """
-        self.write(":FUNC{}:USER {}".format(channel, name)) #this had an error in it
-        self.write(":FUNC{} USER".format(channel)) #this was put together like ":FUNC{}:USER {}:FUNC{} USER"
-        self.write(":VOLT{} {}".format(channel, gain))
-        self.write(":FREQ{} {}".format(channel, freq))
-        self.write(":VOLT{}:OFFS {}".format(channel, offset))  
+        self.instrument.write(":FUNC{}:USER {}".format(channel, name)) #this had an error in it
+        self.instrument.write(":FUNC{} USER".format(channel)) #this was put together like ":FUNC{}:USER {}:FUNC{} USER"
+        self.instrument.write(":VOLT{} {}".format(channel, gain))
+        self.instrument.write(":FREQ{} {}".format(channel, freq))
+        self.instrument.write(":VOLT{}:OFFS {}".format(channel, offset))  
 
 
     def output_enable(self, channel: str='1', on=True):
@@ -462,9 +464,9 @@ class Awg(Instrument):
             on (boolean): True for on, False for off
         """
         if on:
-            self.write(":OUTP{} ON".format(channel))
+            self.instrument.write(":OUTP{} ON".format(channel))
         else:
-            self.write(":OUTP{} OFF".format(channel))
+            self.instrument.write(":OUTP{} OFF".format(channel))
 
     def send_software_trigger(self):
         """
@@ -472,7 +474,7 @@ class Awg(Instrument):
         args:
             wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
         """
-        self.write(":TRIG")
+        self.instrument.write(":TRIG")
 
     def stop(self):
         """Stop the awg.
@@ -498,16 +500,16 @@ class Awg(Instrument):
             num_cycles (str): number of cycles by default set to None which means continous
 
         """
-        self.write(":SOUR:FUNC{} {}".format(channel, func)) 
-        self.write(":SOUR:FREQ{} {}".format(channel, freq))
-        self.write(":VOLT{}:OFFS {}".format(channel, offset))
-        self.write(":VOLT{} {}".format(channel, voltage))
+        self.instrument.write(":SOUR:FUNC{} {}".format(channel, func)) 
+        self.instrument.write(":SOUR:FREQ{} {}".format(channel, freq))
+        self.instrument.write(":VOLT{}:OFFS {}".format(channel, offset))
+        self.instrument.write(":VOLT{} {}".format(channel, voltage))
         if func.lower() == 'squ' or func.lower() == 'square':
-            self.write(":SOUR:FUNC{}:DCYC {}".format(channel, duty_cycle)) #DOES NOT WORK, will need to fix later
+            self.instrument.write(":SOUR:FUNC{}:DCYC {}".format(channel, duty_cycle)) #DOES NOT WORK, will need to fix later
         if num_cycles is not None:
-            self.write(":NCYCles{}".format(num_cycles))
+            self.instrument.write(":NCYCles{}".format(num_cycles))
         if func.lower() == 'pulse' or func.lower() == 'puls':
-            self.write(":SOUR:FUNC{}:PULS:DCYC {}PCT".format(channel, duty_cycle))
+            self.instrument.write(":SOUR:FUNC{}:PULS:DCYC {}PCT".format(channel, duty_cycle))
 
         
     def couple_channels(self):
@@ -519,7 +521,7 @@ class Awg(Instrument):
             wavegen (pyvisa.resources.ENET-Serial INSTR): Keysight 81150A
             
         """
-        self.write(":TRACK:CHAN1 ON")
+        self.instrument.write(":TRACK:CHAN1 ON")
 
 
 """
