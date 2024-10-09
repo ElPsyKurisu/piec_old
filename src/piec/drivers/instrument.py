@@ -3,6 +3,7 @@ Set's up the instrument class that all instruments will inherit basic functionli
 """
 from typing import Union
 import numpy as np
+from pyvisa import ResourceManager
 
 # Define a class
 class Instrument:
@@ -10,8 +11,9 @@ class Instrument:
     species = "Canis familiaris" #do we need any class attributes
 
     # Initializer / Instance attributes
-    def __init__(self, resource):
-        self.instrument = resource
+    def __init__(self, address):
+        rm = ResourceManager()
+        self.instrument = rm.open_resource(address)
 
     # Generic Methods all instruments should have
     def idn(self):
