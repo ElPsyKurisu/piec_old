@@ -6,7 +6,7 @@ import time
 from instrument import Scope
 #yes
 
-class DSOX3024a(Scope):
+class Dsox3024a(Scope):
     """
     Specific Class for this exact model of scope: Keysight DSOX3024a
     """
@@ -24,6 +24,8 @@ class DSOX3024a(Scope):
         """
         return None
 
+    def setup(self, channel: str = 1, voltage_range: str = 16, voltage_offset: str = 1, delay: str = '100e-6', time_range: str = '1e-3', autoscale=True):
+        return super().setup(channel, voltage_range, voltage_offset, delay, time_range, autoscale)
 
 
 

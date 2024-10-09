@@ -1,7 +1,7 @@
 """
 Set's up the instrument class that all instruments will inherit basic functionlity from to be followed by sub classes (e.g. scope, wavegen)
 """
-from typing import override
+from typing import Union
 import numpy as np
 # Define a class
 class Instrument:
@@ -34,6 +34,21 @@ class Instrument:
         self.write("*RST")
         self.write("*CLS")
 
+    def print_specs(self):
+        """
+        Function that lists all class attributes for the instrument.
+        """
+        spec_dict = get_class_attributes_from_instance(self)
+        for key in spec_dict:
+            if type(spec_dict[key]) == str:
+                print(key, ':', spec_dict[key])
+            else:
+                key_dict = getattr(self, key) #this is a dict that the key is the type e.g. list or dict
+                key_dict_key = list(key_dict.keys())[0]
+                key_dict_key_value = key_dict[key_dict_key]
+                print(key, ':', key_dict_key_value)
+            
+
     def _check_params(self, locals_dict):
         """
         Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
@@ -42,7 +57,7 @@ class Instrument:
         class_attributes = get_class_attributes_from_instance(self)
         keys_to_check = get_matching_keys(locals_dict, class_attributes)
         for key in keys_to_check:
-            key_dict = getattr(self, key) #this is a dict that the key is the type
+            key_dict = getattr(self, key) #this is a dict that the key is the type e.g. list or dict
             if key_dict is None:
                 print("Warning no range-checking defined for \033[1m{}\033[0m, skipping __check_params".format(key)) #makes bold text
                 continue
@@ -163,7 +178,7 @@ class Scope(Instrument):
     def configure_trigger_characteristics(self, type: str='EDGE', holdoff_time: str='4E-8', low_voltage_level: str='1',
                                       high_voltage_level: str='1', trigger_source: str='CHAN1', sweep: str='AUTO',
                                        enable_high_freq_filter=False, enable_noise_filter=False):
-        """Configures the trigger characteristics Taken from LabVIEW. 'Configures the basic settings of the trigger.'
+        """Configures the trigger characteristics Taken from EKPY. 'Configures the basic settings of the trigger.'
         args:
             scope (pyvisa.resources.gpib.GPIBInstrument): Keysight DSOX3024a
             type (str): Trigger type, accepted params are: [EDGE (Edge), GLIT (Glitch), PATT (Pattern), TV (TV), EBUR (Edge Burst), RUNT (Runt), NFC (Setup Hold), TRAN (Transition), SBUS1 (Serial Bus 1), SBUS2 (Serial Bus 2), USB (USB), DEL (Delay), OR (OR), NFC (Near Field Communication)]
@@ -192,7 +207,7 @@ class Scope(Instrument):
 
     def configure_trigger_edge(self, trigger_source: str='CHAN1', input_coupling: str='AC', edge_slope: str='POS', 
                            level: str='0', filter_type: str='OFF'):
-        """Configures the trigger characteristics Taken from LabVIEW. 'Configures the basic settings of the trigger.'
+        """Configures the trigger characteristics Taken from EKPY. 'Configures the basic settings of the trigger.'
         args:
             scope (pyvisa.resources.gpib.GPIBInstrument): Keysight DSOX3024a
             trigger_source (str): Desired channel/source to trigger on allowed values are: [CHAN1,CHAN2,CHAN3,CHAN4,DIG0,DIG1 (there are more)]
@@ -312,6 +327,201 @@ class Scope(Instrument):
         return preamble_dict, time, wfm
 
 
+class Awg(Instrument):
+    """
+    Sub-class of Instrument to hold the general methods used by an awg. For Now defaulted to keysight81150a, but can always ovveride certain SCOPE functions
+    """
+    #Should be overriden
+    channel = None
+    func = None
+    #add function called error test which checks if inputted paramas are in valid range
+    def configure_impedance(self, channel: str='1', source_impedance: str='50.0', load_impedance: str='50.0'):
+        """
+        This program configures the output and input impedance of the wavegen. Taken from EKPY.
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+            channel (str): Desired Channel to configure accepted params are [1,2]
+            source_impedance (str): The desired source impedance in units of Ohms, allowed args are [5, 50]
+            load_impedance (str): The desired load impedance in units of Ohms, allowed args are [0.3 to 1E6]
+
+        """
+        self.write(":OUTP{}:IMP {}".format(channel, source_impedance))
+        #wavegen.write(":OUTP{}:LOAD {}".format(channel, load_impedance)) Also valid for below
+        self.write(":OUTP{}:IMP:EXT {}".format(channel, load_impedance))
+
+    def configure_output_amplifier(self, channel: str='1', type: str='HIV'):
+        """
+        This program configures the output amplifier for eiither maximum bandwith or amplitude. Taken from EKPY.
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+            channel (str): Desired Channel to configure accepted params are [1,2]
+            type (str): Amplifier Type args = [HIV (MAximum Amplitude), HIB (Maximum Bandwith)]
+        """
+        self.write("OUTP{}:ROUT {}".format(channel, type))
+
+    def configure_trigger(self, channel: str='1', source: str='IMM', mode: str='EDGE', slope: str='POS'):
+        """
+        This program configures the output amplifier for eiither maximum bandwith or amplitude. Taken from EKPY.
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+            channel (str): Desired Channel to configure accepted params are [1,2]
+            source (str): Trigger source allowed args = [IMM (immediate), INT2 (internal), EXT (external), MAN (software trigger)]
+            mode (str): The type of triggering allowed args = [EDGE (edge), LEV (level)]
+            slope (str): The slope of triggering allowed args = [POS (positive), NEG (negative), EIT (either)]
+        """ 
+        self.write(":ARM:SOUR{} {}".format(channel, source))
+        self.write(":ARM:SENS{} {}".format(channel, mode))
+        self.write(":ARM:SLOP {}".format(slope))
+
+    def create_arb_wf_binary(self, data: Union[np.array, list], name: str='ARB1'):
+        """
+        NOTE: Dont think this works atm
+        This program creates an arbitrary waveform within the limitations of the
+        Keysight 81150A which has a limit of 2 - 524288 data points. In order to send data
+        in accordance with the 488.2 block format which looks like #ABC, where '#' marks the start
+        of the data flow and 'A' refers to the number of digits in the byte count, 'B' refers to the
+        byte count and 'C' refers to the actual data in binary. The data is first scaled between
+        -8191 to 8191 in accordance to our instrument. Adapted from EKPY (note their arrays
+        contain 10,000 elements). 
+        Note: Will NOT save waveform in non-volatile memory if all the user available slots are
+        filled (There are 4 allowed at 1 time plus 1 in volatile memory).
+
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+            data (ndarray or list): Data to be converted to wf
+            name (str): Name of waveform, must start with A-Z
+        """  
+        #will want to include error handling in this one.
+        data = np.array(data)
+        scaled_data = scale_waveform_data(data)
+        scaled_data = scaled_data.astype(np.int16)
+        size_of_data = str(2*len(scaled_data)) #multiply by 2 to account for negative values?
+        #want to send stuff accoprding to format whcih is #ABC
+        a = len(size_of_data.encode('utf-8')) 
+        b = size_of_data
+        #c is the binary data to be passed
+        c = scaled_data.tobytes()
+        #i think im done?
+        self.write(":FORM:BORD NORM")
+        self.write(":DATA:DAC VOLATILE, #{}{}{}".format(a,b,c))
+        self.write(":DATA:COPY {}, VOLATILE".format(name))
+
+    def create_arb_wf(self, data, name=None):
+        """
+        This program creates an arbitrary waveform using the slow non binary format, see create_arbitrary_wf_binary for more info
+        Note: Will NOT save waveform in non-volatile memory, unless a name is given.
+        Note: Will NOT save waveform in non-volatile memory if all the user available slots are
+        filled (There are 4 allowed at 1 time plus 1 in volatile memory).
+        Also for 10k points it is quite slow, allow for like 3 seconds to send the data. Will need to rewrite the binary version
+        if we want speed
+
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+            data (ndarray or list): Data to be converted to wf
+            name (str): Name of waveform, must start with A-Z
+        """
+        data_string = ""
+        for i in range(len(data)):
+            data_string += str(data[i]) +','
+        data_string = data_string[:-1] #remove last comma
+        self.write(":DATA VOLATILE, {}".format(data_string))
+        if name is not None:
+            self.write(":DATA:COPY {}, VOLATILE".format(name))
+
+
+
+    #https://github.com/jeremyherbert/barbutils/blob/master/barbutils.py
+    #upper frequnecy range is 120MHZ so do not go above that
+    #maybe i can use this barb stuff to read the waveforms too...
+    #finds avg max - min /2 can probably use githubn library to generate barb file then pass that
+
+    def configure_arb_wf(self, channel: str='1', name='VOLATILE', gain: str='1.0', offset: str='0.00', freq: str='1000'):
+        """
+        This program configures arbitrary waveform already saved on the instrument. Taken from EKPY. 
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+            channel (str): Desired Channel to configure accepted params are [1,2]
+            name (str): The Arbitrary Waveform name as saved on the instrument, by default VOLATILE
+            gain (str): The V_pp by which the waveform should be gained by
+            offset (str): The voltage offset in units of volts
+            freq (str): the frequency in units of Hz for the arbitrary waveform
+        """
+        self.write(":FUNC{}:USER {}".format(channel, name)) #this had an error in it
+        self.write(":FUNC{} USER".format(channel)) #this was put together like ":FUNC{}:USER {}:FUNC{} USER"
+        self.write(":VOLT{} {}".format(channel, gain))
+        self.write(":FREQ{} {}".format(channel, freq))
+        self.write(":VOLT{}:OFFS {}".format(channel, offset))  
+
+
+    def output_enable(self, channel: str='1', on=True):
+        """
+        This program toggles the selected output. Taken from EKPY. 
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+            channel (str): Desired Channel to configure accepted params are [1,2]
+            on (boolean): True for on, False for off
+        """
+        if on:
+            self.write(":OUTP{} ON".format(channel))
+        else:
+            self.write(":OUTP{} OFF".format(channel))
+
+    def send_software_trigger(self):
+        """
+        This program sends the software trigger. Taken from EKPY. 
+        args:
+            wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
+        """
+        self.write(":TRIG")
+
+    def stop(self):
+        """Stop the awg.
+
+        args:
+            wavegen (pyvisa.resources.ENET-Serial INSTR): Keysight 81150A
+        """
+        self.output_enable('1', False) #should change to take into account channels available from class attributes
+        self.output_enable('2', False)
+
+    def set_output_wf(self, channel: str='1', func='SIN', freq='1e3', voltage='1', offset='0', duty_cycle='50', num_cycles=None):
+        """
+        Decides what built-in wf to send - by default sin
+
+        args:
+            wavegen (pyvisa.resources.ENET-Serial INSTR): Keysight 81150A
+            channel (str): Desired Channel to configure accepted params are [1,2]
+            func (str): Desired output function, allowed args are [SIN (sine), SQU (square), RAMP, PULSe, NOISe, DC, USER (arb)]
+            freq (str): frequency in Hz (have not added suffix funcitonaility yet)
+            voltage (str): The amplitude of the signal in volts
+            offset (str): DC offset for waveform in volts
+            duty_cycle (str): duty_cycle defined as 100* pulse_width / Period ranges from 0-100, (cant actually do 0 or 100 but in between is fine)
+            num_cycles (str): number of cycles by default set to None which means continous
+
+        """
+        self.write(":SOUR:FUNC{} {}".format(channel, func)) 
+        self.write(":SOUR:FREQ{} {}".format(channel, freq))
+        self.write(":VOLT{}:OFFS {}".format(channel, offset))
+        self.write(":VOLT{} {}".format(channel, voltage))
+        if func.lower() == 'squ' or func.lower() == 'square':
+            self.write(":SOUR:FUNC{}:DCYC {}".format(channel, duty_cycle)) #DOES NOT WORK, will need to fix later
+        if num_cycles is not None:
+            self.write(":NCYCles{}".format(num_cycles))
+        if func.lower() == 'pulse' or func.lower() == 'puls':
+            self.write(":SOUR:FUNC{}:PULS:DCYC {}PCT".format(channel, duty_cycle))
+
+        
+    def couple_channels(self):
+        """
+        Couples the channel params so Channel 1 and 2 are identical, not sure how well the outputs will sync. 
+        Convention is to make changes to channel 1 now that will affect channel 2
+
+        args:
+            wavegen (pyvisa.resources.ENET-Serial INSTR): Keysight 81150A
+            
+        """
+        self.write(":TRACK:CHAN1 ON")
+
+
 """
 Helper Functions Below
 """
@@ -351,6 +561,19 @@ def get_class_attributes_from_instance(instance):
     for base in cls.__mro__:
         attributes.update({attr: getattr(base, attr) for attr in base.__dict__ if not callable(getattr(base, attr)) and not attr.startswith("__")})
     return attributes
+
+'''
+Helper functions for awg class:
+'''
+
+def scale_waveform_data(data: np.array) -> np.array:
+    '''
+    Scales the data between -1 and 1 then multiplies by instrument specific
+    scaling factor (8191 for ours) 
+    NOTE THIS MAY NOT ACTUALLY WORK, AS YOU CAN JUST PASS THE DATA DIRECTLY AND SHOULD BE FROM -1 TO 1
+    '''
+    normalized = 2*(data - np.min(data))/np.ptp(data) - 1
+    return normalized * 8191
 
 """
 Error handling: maybe make a seperate python file to take care of error handling 
