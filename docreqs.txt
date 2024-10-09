@@ -7,4 +7,5 @@ sphinx==3.4.3
 sphinx_rtd_theme==0.5.1
 IPython==7.22.0
 igor==0.3
+pymeasure==0.14.0
 Jinja2<3.1
