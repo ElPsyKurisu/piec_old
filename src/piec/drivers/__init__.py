@@ -1,2 +1,2 @@
 from .instrument import *
-from pymeasure import*
+from pymeasure.instruments import*

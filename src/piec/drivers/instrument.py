@@ -336,7 +336,9 @@ class Awg(Instrument):
     """
     #Should be overriden
     channel = None
-    func = None
+    voltage = None
+    frequency = None
+    func = None #might be useless since all awgs should have sin, squ, pulse etc
     slew_rate = None #1V/ns
     #add function called error test which checks if inputted paramas are in valid range
     def configure_impedance(self, channel: str='1', source_impedance: str='50.0', load_impedance: str='50.0'):
@@ -363,17 +365,17 @@ class Awg(Instrument):
         """
         self.instrument.write("OUTP{}:ROUT {}".format(channel, type))
 
-    def configure_trigger(self, channel: str='1', source: str='IMM', mode: str='EDGE', slope: str='POS'):
+    def configure_trigger(self, channel: str='1', trigger_source: str='IMM', mode: str='EDGE', slope: str='POS'):
         """
-        This program configures the output amplifier for eiither maximum bandwith or amplitude. Taken from EKPY.
+        This program configures the trigger. Taken from EKPY.
         args:
             wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
             channel (str): Desired Channel to configure accepted params are [1,2]
-            source (str): Trigger source allowed args = [IMM (immediate), INT2 (internal), EXT (external), MAN (software trigger)]
+            trigger_source (str): Trigger source allowed args = [IMM (immediate), INT2 (internal), EXT (external), MAN (software trigger)]
             mode (str): The type of triggering allowed args = [EDGE (edge), LEV (level)]
             slope (str): The slope of triggering allowed args = [POS (positive), NEG (negative), EIT (either)]
         """ 
-        self.instrument.write(":ARM:SOUR{} {}".format(channel, source))
+        self.instrument.write(":ARM:SOUR{} {}".format(channel, trigger_source))
         self.instrument.write(":ARM:SENS{} {}".format(channel, mode))
         self.instrument.write(":ARM:SLOP {}".format(slope))
 
@@ -413,8 +415,8 @@ class Awg(Instrument):
     def create_arb_wf(self, data, name=None):
         """
         This program creates an arbitrary waveform using the slow non binary format, see create_arbitrary_wf_binary for more info
-        Note: Will NOT save waveform in non-volatile memory, unless a name is given.
-        Note: Will NOT save waveform in non-volatile memory if all the user available slots are
+        NOTE: Will NOT save waveform in non-volatile memory, unless a name is given.
+        NOTE: Will NOT save waveform in non-volatile memory if all the user available slots are
         filled (There are 4 allowed at 1 time plus 1 in volatile memory).
         Also for 10k points it is quite slow, allow for like 3 seconds to send the data. Will need to rewrite the binary version
         if we want speed
@@ -439,21 +441,21 @@ class Awg(Instrument):
     #maybe i can use this barb stuff to read the waveforms too...
     #finds avg max - min /2 can probably use githubn library to generate barb file then pass that
 
-    def configure_arb_wf(self, channel: str='1', name='VOLATILE', gain: str='1.0', offset: str='0.00', freq: str='1000'):
+    def configure_arb_wf(self, channel: str='1', name='VOLATILE', voltage: str='1.0', offset: str='0.00', frequency: str='1000'):
         """
         This program configures arbitrary waveform already saved on the instrument. Taken from EKPY. 
         args:
             wavegen (pyvisa.resources.gpib.GPIBInstrument): Keysight 81150A
             channel (str): Desired Channel to configure accepted params are [1,2]
             name (str): The Arbitrary Waveform name as saved on the instrument, by default VOLATILE
-            gain (str): The V_pp by which the waveform should be gained by
+            voltage (str): The V_pp of the waveform in volts
             offset (str): The voltage offset in units of volts
-            freq (str): the frequency in units of Hz for the arbitrary waveform
+            frequency (str): the frequency in units of Hz for the arbitrary waveform
         """
         self.instrument.write(":FUNC{}:USER {}".format(channel, name)) #this had an error in it
-        self.instrument.write(":FUNC{} USER".format(channel)) #this was put together like ":FUNC{}:USER {}:FUNC{} USER"
-        self.instrument.write(":VOLT{} {}".format(channel, gain))
-        self.instrument.write(":FREQ{} {}".format(channel, freq))
+        self.instrument.write(":FUNC{} USER".format(channel)) #this was put together like ":FUNC{}:USER {}:FUNC{} USER" I feel like I dont need both of these
+        self.instrument.write(":VOLT{} {}".format(channel, voltage))
+        self.instrument.write(":FREQ{} {}".format(channel, frequency))
         self.instrument.write(":VOLT{}:OFFS {}".format(channel, offset))  
 
 
@@ -496,7 +498,7 @@ class Awg(Instrument):
             channel (str): Desired Channel to configure accepted params are [1,2]
             func (str): Desired output function, allowed args are [SIN (sine), SQU (square), RAMP, PULSe, NOISe, DC, USER (arb)]
             freq (str): frequency in Hz (have not added suffix funcitonaility yet)
-            voltage (str): The amplitude of the signal in volts
+            voltage (str): The V_pp of the waveform in volts
             offset (str): DC offset for waveform in volts
             duty_cycle (str): duty_cycle defined as 100* pulse_width / Period ranges from 0-100, (cant actually do 0 or 100 but in between is fine)
             num_cycles (str): number of cycles by default set to None which means continous
