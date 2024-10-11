@@ -11,11 +11,19 @@ class Dsox3024a(Scope):
     Specific Class for this exact model of scope: Keysight DSOX3024a
     """
     #add class attributes here, like max y range etc
+    """
     voltage_range = {'range':(8e-3, 40)} #voltage range
     voltage_scale = {'range':(8e-4, 4)} #TO UPDATE WHEN I GET IN LAB WITH CORRECT VALUES
     time_range = {'range':(2e-8, 500)}
     time_scale = {'range':(2e-9, 50)}
     time_base_type = {'list': ['MAIN', 'WINDow', 'WIND', 'XY', 'ROLL']} #added WIND so either WIND or WINDOW is allowed
+    """
+    voltage_range = (8e-3, 40)
+    voltage_scale = (8e-4, 4)
+    time_range = (2e-8, 500)
+    time_scale = (2e-9, 50)
+    time_base_type = ['MAIN', 'WINDow', 'WIND', 'XY', 'ROLL'] #added WIND so either WIND or WINDOW is allowed
+    channel = ['1', '2', '3', '4']
 
     def __class_specific(self):
         """
@@ -25,6 +33,9 @@ class Dsox3024a(Scope):
         return None
 
     def setup(self, channel: str = 1, voltage_range: str = 16, voltage_offset: str = 1, delay: str = '100e-6', time_range: str = '1e-3', autoscale=True):
+        """
+        Override default params here by ovverriding class Scope funtions
+        """
         return super().setup(channel, voltage_range, voltage_offset, delay, time_range, autoscale)
 
 

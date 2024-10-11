@@ -57,8 +57,40 @@ class Instrument:
                 key_dict_key_value = key_dict[key_dict_key]
                 print(key, ':', key_dict_key_value)
             
-
     def _check_params(self, locals_dict):
+        """
+        Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
+        against all class attributes and ensures if they match the range is valid 
+        """
+        class_attributes = get_class_attributes_from_instance(self)
+        keys_to_check = get_matching_keys(locals_dict, class_attributes)
+        for key in keys_to_check:
+            attribute_value = getattr(self, key) #allowed types are strings, tuples, lists, and dicts
+            if attribute_value is None:
+                print("Warning no range-checking defined for \033[1m{}\033[0m, skipping _check_params".format(key)) #makes bold text
+                continue
+            input_value = locals_dict[key]
+            print(input_value, 'input value')
+            if type(attribute_value) == tuple:
+                if not is_value_between(input_value, attribute_value): #will error need to make jey values correct
+                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, key, attribute_value))
+            if type(attribute_value) == list:
+                if not is_contained(input_value, attribute_value): #checks if the input value is in the allowed list
+                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is not in list of acceptable \033[1m{}\033[0m".format(input_value, key, attribute_value))
+            if type(attribute_value) == dict:
+                #need helper function here
+                attribute_key = get_matching_keys(locals_dict, attribute_value) #this is the first key in the class attribute dict
+                if len(attribute_key) != 1:
+                    print("WARNING found {} keys instead of 1, skipping {} checking".format(len(attribute_key), key))
+                else: #assumes input is range btw, since no other reason for using a dict i believe. WIll update if changes
+                    local_value = locals_dict[attribute_key[0]] #this is the value
+                    attribute_sub_dict = attribute_value[attribute_key[0]]
+                    if not is_value_between(input_value, attribute_sub_dict[local_value]):
+                        exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, attribute_key, attribute_sub_dict[local_value]))
+
+
+
+    def _check_params_old(self, locals_dict):
         """
         Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
         against all class attributes and ensures if they match the range is valid
@@ -112,7 +144,6 @@ class Scope(Instrument):
             delay (str): The delay in units of s
             time_range (str): The x scale of the oscilloscope, min 20ns, max 500s
         """
-        print(locals())
         self._check_params(locals())
         self.reset()
         if autoscale:
@@ -343,13 +374,13 @@ class Awg(Instrument):
     """
     #Should be overriden
     channel = None
-    voltage = None
-    frequency = {'nested': {'sine': (1e-6, 240e6), 'square': (1e-6, 120e6), 'ramp': (1e-6, 5e6), 'pulse': (1e-6, 120e6), 'pattern': (1e-6, 120e6), 'arb': (1e-6, 120e6)}} #None
+    voltage = (0, 5)
+    frequency = {'func': {'sine': (1e-6, 240e6), 'square': (1e-6, 120e6), 'ramp': (1e-6, 5e6), 'pulse': (1e-6, 120e6), 'pattern': (1e-6, 120e6), 'arb': (1e-6, 120e6)}} #None
     func = None #might be useless since all awgs should have sin, squ, pulse etc
     slew_rate = None #1V/ns
     #add function called error test which checks if inputted paramas are in valid range
 
-    def _check_params(self, locals_dict):
+    def _check_params_old(self, locals_dict):
         """
         Override of the Instrument class _check_params to handle nested dictionaries for the awg case of different frequnecy requirements for different function
 
@@ -539,7 +570,7 @@ class Awg(Instrument):
         self.output_enable('1', False) #should change to take into account channels available from class attributes
         self.output_enable('2', False)
 
-    def set_output_wf(self, channel: str='1', func='SIN', freq='1e3', voltage='1', offset='0', duty_cycle='50', num_cycles=None):
+    def set_output_wf(self, channel: str='1', func='sine', frequency='1e3', voltage='1', offset='0', duty_cycle='50', num_cycles=None):
         """
         Decides what built-in wf to send - by default sin
 
@@ -547,15 +578,16 @@ class Awg(Instrument):
             wavegen (pyvisa.resources.ENET-Serial INSTR): Keysight 81150A
             channel (str): Desired Channel to configure accepted params are [1,2]
             func (str): Desired output function, allowed args are [SIN (sine), SQU (square), RAMP, PULSe, NOISe, DC, USER (arb)]
-            freq (str): frequency in Hz (have not added suffix funcitonaility yet)
+            frequency (str): frequency in Hz (have not added suffix funcitonaility yet)
             voltage (str): The V_pp of the waveform in volts
             offset (str): DC offset for waveform in volts
             duty_cycle (str): duty_cycle defined as 100* pulse_width / Period ranges from 0-100, (cant actually do 0 or 100 but in between is fine)
             num_cycles (str): number of cycles by default set to None which means continous
 
         """
+        self._check_params(locals())
         self.instrument.write(":SOUR:FUNC{} {}".format(channel, func)) 
-        self.instrument.write(":SOUR:FREQ{} {}".format(channel, freq))
+        self.instrument.write(":SOUR:FREQ{} {}".format(channel, frequency))
         self.instrument.write(":VOLT{}:OFFS {}".format(channel, offset))
         self.instrument.write(":VOLT{} {}".format(channel, voltage))
         if func.lower() == 'squ' or func.lower() == 'square':
@@ -600,6 +632,7 @@ def is_value_between(value, num_tuple):
     if len(num_tuple) != 2:
         raise ValueError("Tuple must contain exactly two numbers")
     return num_tuple[0] <= value <= num_tuple[1]
+
 
 def get_matching_keys(dict1, dict2):
     """ 
