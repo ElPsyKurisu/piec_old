@@ -88,34 +88,6 @@ class Instrument:
                     if not is_value_between(input_value, attribute_sub_dict[local_value]):
                         exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, attribute_key, attribute_sub_dict[local_value]))
 
-
-
-    def _check_params_old(self, locals_dict):
-        """
-        Want to check class attributes and arguments from the function are in acceptable ranges. Uses .locals() to get all arguments and checks
-        against all class attributes and ensures if they match the range is valid
-        """
-        class_attributes = get_class_attributes_from_instance(self)
-        keys_to_check = get_matching_keys(locals_dict, class_attributes)
-        for key in keys_to_check:
-            key_dict = getattr(self, key) #this is a dict that the key is the type e.g. list or dict
-            if key_dict is None:
-                print("Warning no range-checking defined for \033[1m{}\033[0m, skipping _check_params".format(key)) #makes bold text
-                continue
-            input_value = locals_dict[key]
-            if input_value is None:
-                #Some functions may have a default value of None designed to be able to call a function without sending that command
-                continue
-            key_dict_key = list(key_dict.keys())[0]
-            key_dict_key_value = key_dict[key_dict_key]
-            #check if range or list type
-            if key_dict_key == "range":
-                if not is_value_between(input_value, key_dict_key_value): #will error need to make jey values correct
-                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, key, key_dict_key_value))
-            elif key_dict_key == "list":
-                if not is_contained(input_value, key_dict_key_value): #checks if the input value is in the allowed list
-                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is not in list of acceptable \033[1m{}\033[0m".format(input_value, key, key_dict_key_value))
-
 class Scope(Instrument):
     """
     Sub-class of Instrument to hold the general methods used by scopes. For Now defaulted to DSOX3024a, but can always ovveride certain SCOPE functions
@@ -379,48 +351,6 @@ class Awg(Instrument):
     func = None #might be useless since all awgs should have sin, squ, pulse etc
     slew_rate = None #1V/ns
     #add function called error test which checks if inputted paramas are in valid range
-
-    def _check_params_old(self, locals_dict):
-        """
-        Override of the Instrument class _check_params to handle nested dictionaries for the awg case of different frequnecy requirements for different function
-
-        Three main types of class attributes can be had and MUST be labeled NOTE could also just make it check the type lol so you couldm do voltage = (1,3) then you know its a range but if its a list then you know its a list... if dict, nested then
-        1. 'range' e.g. voltage = {'range': (1, 3)} in a tuple format
-        2. 'list' e.g. channel = {'list': ['1', '2']}
-        3. 'nested' e.g. frequency = {'nested': {'sine': (1,3), ...}}
-        """
-        class_attributes = get_class_attributes_from_instance(self)
-        keys_to_check = get_matching_keys(locals_dict, class_attributes) #this returns a list ['voltage', 'frequency' ...] etc of matching keys from locals()
-        for key in keys_to_check:
-            print('key:', key)
-            key_dict = getattr(self, key) #this is a dict that the key is the type e.g. list or dict or nested
-            print(key_dict, 'key_dict')
-            if key_dict is None:
-                print("Warning no range-checking defined for \033[1m{}\033[0m, skipping __check_params".format(key)) #makes bold text
-                continue
-            input_value = locals_dict[key]
-            if input_value is None:
-                #Some functions may have a default value of None designed to be able to call a function without sending that command
-                continue
-            key_dict_key = list(key_dict.keys())[0]
-            print(key_dict_key, 'key dict key')
-            key_dict_key_value = key_dict[key_dict_key]
-            #check if range or list type
-            if key_dict_key == "range":
-                if not is_value_between(input_value, key_dict_key_value): #will error need to make jey values correct
-                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is out of acceptable Range \033[1m{}\033[0m".format(input_value, key, key_dict_key_value))
-            if key_dict_key == "list":
-                if not is_contained(input_value, key_dict_key_value): #checks if the input value is in the allowed list
-                    exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is not in list of acceptable \033[1m{}\033[0m".format(input_value, key, key_dict_key_value))
-            elif key_dict_key == 'nested': #note nested assumes range configuration, otherwise use list
-                nested_key = get_matching_keys(locals_dict, key_dict_key_value) #this wont work since the locals_dict keys dont have sine
-                if len(nested_key) != 1:
-                    exit_with_error("Passed in non-existing argument or the class attribute of the child class is incorrect")
-                else:
-                    nested_key = nested_key[0] #this could be like 'sine' or 'square' in the frequency class attribute
-                    if not is_value_between(input_value, key_dict_key_value[nested_key]): #here key_dict_key_value is actually the innermost dictionary like {'sine': (1e-6,120e6)}
-                        exit_with_error("Error input value of \033[1m{}\033[0m for arg \033[1m{}\033[0m is not in list of acceptable \033[1m{}\033[0m".format(input_value, key, key_dict_key_value[nested_key]))
-                return
 
     def configure_impedance(self, channel: str='1', source_impedance: str='50.0', load_impedance: str='50.0'):
         """
