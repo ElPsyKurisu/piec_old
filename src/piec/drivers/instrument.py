@@ -13,7 +13,7 @@ class Instrument:
     # Initializer / Instance attributes
     def __init__(self, address):
         rm = ResourceManager()
-        #self.instrument = rm.open_resource(address) #comment out to debug without VISA connection
+        self.instrument = rm.open_resource(address) #comment out to debug without VISA connection
 
     def _debug(self, **args):
         """
@@ -42,6 +42,22 @@ class Instrument:
         """
         self.instrument.write("*RST")
         self.instrument.write("*CLS")
+
+    def check_errors(self):
+        """
+        Returns a list of errors or None if there are no errors
+        Technically not an IEEE Mandated command but all instruments for our purposes should use this
+        """
+        errors = []
+        while True:
+            error = self.instrument.query('SYST:ERR?')
+            if error.startswith('+0,'):
+                break
+            errors.append(error)
+        if len(errors) == 0:
+            errors = None
+        return errors
+
 
     def print_specs(self):
         """
