@@ -46,7 +46,8 @@ class Instrument:
     def check_errors(self):
         """
         Returns a list of errors or None if there are no errors
-        Technically not an IEEE Mandated command but all instruments for our purposes should use this
+        Technically not an IEEE Mandated command but all instruments for our purposes should use this.
+        With help from ChatGPT
         """
         errors = []
         while True:
