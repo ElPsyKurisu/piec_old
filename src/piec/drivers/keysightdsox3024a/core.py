@@ -11,13 +11,7 @@ class Dsox3024a(Scope):
     Specific Class for this exact model of scope: Keysight DSOX3024a
     """
     #add class attributes here, like max y range etc
-    """
-    voltage_range = {'range':(8e-3, 40)} #voltage range
-    voltage_scale = {'range':(8e-4, 4)} #TO UPDATE WHEN I GET IN LAB WITH CORRECT VALUES
-    time_range = {'range':(2e-8, 500)}
-    time_scale = {'range':(2e-9, 50)}
-    time_base_type = {'list': ['MAIN', 'WINDow', 'WIND', 'XY', 'ROLL']} #added WIND so either WIND or WINDOW is allowed
-    """
+    #correct syntax is tuple for ranges, list for limited amount, and dictionaries for nested things...
     voltage_range = (8e-3, 40)
     voltage_scale = (8e-4, 4)
     time_range = (2e-8, 500)

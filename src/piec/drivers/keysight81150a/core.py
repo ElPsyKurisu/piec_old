@@ -12,10 +12,10 @@ class Keysight81150a(Awg):
     """
     #add class attributes here, like max y range etc
     #correct syntax is tuple for ranges, list for limited amount, and dictionaries for nested things...
-    channel = {'list': ['1', '2']} #allowable channels
-    voltage = {'range':(8e-3, 40)}
-    frequency = {'nested': {'sine': (1e-6, 240e6), 'square': (1e-6, 120e6), 'ramp': (1e-6, 5e6), 'pulse': (1e-6, 120e6), 'pattern': (1e-6, 120e6), 'arb': (1e-6, 120e6)}} #note pattern is 10e6 max freq for external pattern
-    func = {'list': ['sine', 'square', 'ramp', 'pulse', 'pattern', 'arb']} #might be useless since all awgs should have sin, squ, pulse etc maybe not include arb? idk
+    channel = ['1', '2'] #allowable channels ['1', '2']
+    voltage = (8e-3, 40)
+    frequency = {'func': {'sine': (1e-6, 240e6), 'square': (1e-6, 120e6), 'ramp': (1e-6, 5e6), 'pulse': (1e-6, 120e6), 'pattern': (1e-6, 120e6), 'arb': (1e-6, 120e6)}}
+    func = ['sine', 'square', 'ramp', 'pulse', 'pattern', 'arb'] #might be useless since all awgs should have sin, squ, pulse etc maybe not include arb? idk
     slew_rate = '1V/ns' #1V/ns these are the units, currently just to know
 
     def __class_specific(self):

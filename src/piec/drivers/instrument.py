@@ -98,7 +98,6 @@ class Scope(Instrument):
     time_range = None   
     time_scale = None
     time_base_type = None
-    #add function called error test which checks if inputted paramas are in valid range
 
     def setup(self, channel: str=1, voltage_range: str=16, voltage_offset: str=1.00, delay: str='100e-6',
           time_range: str='1e-3', autoscale=True):
@@ -346,11 +345,10 @@ class Awg(Instrument):
     """
     #Should be overriden
     channel = None
-    voltage = (0, 5)
-    frequency = {'func': {'sine': (1e-6, 240e6), 'square': (1e-6, 120e6), 'ramp': (1e-6, 5e6), 'pulse': (1e-6, 120e6), 'pattern': (1e-6, 120e6), 'arb': (1e-6, 120e6)}} #None
+    voltage = None
+    frequency = None
     func = None #might be useless since all awgs should have sin, squ, pulse etc
     slew_rate = None #1V/ns
-    #add function called error test which checks if inputted paramas are in valid range
 
     def configure_impedance(self, channel: str='1', source_impedance: str='50.0', load_impedance: str='50.0'):
         """
