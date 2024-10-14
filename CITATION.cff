@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: Please cite this software using these metadata.
+authors:
+  - family-names: Fratian
+    given-names: Geo, George
+    email: geo_fratian@brown.edu
+    affiliation: Brown University
+    orcid: 'https://orcid.org/0009-0008-2687-671X'
+title: piec
+type: software
+version: 0.0.01
+url: https://github.com/ElPsyKurisu/PIEC
